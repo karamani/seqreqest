@@ -1,16 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"github.com/codegangsta/cli"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/codegangsta/cli"
+	"github.com/karamani/iostreams"
 )
 
 var (
@@ -55,39 +55,35 @@ func main() {
 			Destination: &separatorArg,
 		},
 	}
+
 	app.Action = func(c *cli.Context) {
 
-		reader := bufio.NewReader(os.Stdin)
-		inputString := ""
-		for {
-			bytes, hasMoreInLine, err := reader.ReadLine()
+		// this func's called for each stdin's row
+		process := func(row []byte) error {
+
+			debug(string(row))
+
+			reqParams := strings.Split(string(row), separatorArg)
+
+			urlString := urlArg
+			dataString := dataArg
+			for i, param := range reqParams {
+				paramTpl := fmt.Sprintf("{%d}", i+1)
+				urlString = strings.Replace(urlString, paramTpl, param, -1)
+				dataString = strings.Replace(dataString, paramTpl, param, -1)
+			}
+
+			err := sendRequest(urlString, dataString)
 			if err != nil {
-				if err != io.EOF {
-					log.Fatalf("ERROR: %s\n", err.Error())
-				}
-				break
+				log.Println(err.Error())
 			}
-			inputString += string(bytes)
-			if !hasMoreInLine {
 
-				debug(inputString)
-				reqParams := strings.Split(inputString, separatorArg)
+			return nil
+		}
 
-				urlString := urlArg
-				dataString := dataArg
-				for i, param := range reqParams {
-					paramTpl := fmt.Sprintf("{%d}", i+1)
-					urlString = strings.Replace(urlString, paramTpl, param, -1)
-					dataString = strings.Replace(dataString, paramTpl, param, -1)
-				}
-
-				err := sendRequest(urlString, dataString)
-				if err != nil {
-					log.Println(err.Error())
-				}
-
-				inputString = ""
-			}
+		err := iostreams.ProcessStdin(process)
+		if err != nil {
+			log.Panicln(err.Error())
 		}
 	}
 
@@ -96,7 +92,7 @@ func main() {
 
 func debug(msg string) {
 	if debugMode {
-		fmt.Println("DEBUG: " + msg)
+		log.Println("[DEBUG] " + msg)
 	}
 }
 
@@ -104,6 +100,8 @@ func sendRequest(urlString, dataString string) error {
 
 	u, _ := url.ParseRequestURI(urlString)
 	u.RawQuery = dataString
+
+	debug(fmt.Sprintf("%#v", u))
 
 	req := &http.Request{
 		Method: methodArg,
