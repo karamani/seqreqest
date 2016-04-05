@@ -20,6 +20,7 @@ var (
 	methodArg    string
 	separatorArg string
 	throughMode  bool
+	fakeMode     bool
 )
 
 func main() {
@@ -60,6 +61,11 @@ func main() {
 			Usage:       "translate stdin to stdout",
 			Destination: &throughMode,
 		},
+		cli.BoolFlag{
+			Name:        "fake",
+			Usage:       "fake mode (without http requests)",
+			Destination: &fakeMode,
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -77,6 +83,13 @@ func main() {
 				paramTpl := fmt.Sprintf("{%d}", i+1)
 				urlString = strings.Replace(urlString, paramTpl, param, -1)
 				dataString = strings.Replace(dataString, paramTpl, param, -1)
+			}
+
+			debug("Url: %s", urlString)
+			debug("Data: %s", dataString)
+
+			if fakeMode {
+				return nil
 			}
 
 			err := sendRequest(urlString, dataString)
