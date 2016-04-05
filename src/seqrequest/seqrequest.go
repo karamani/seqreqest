@@ -19,6 +19,7 @@ var (
 	dataArg      string
 	methodArg    string
 	separatorArg string
+	throughMode  bool
 )
 
 func main() {
@@ -54,6 +55,11 @@ func main() {
 			Value:       "\t",
 			Destination: &separatorArg,
 		},
+		cli.BoolFlag{
+			Name:        "through",
+			Usage:       "translate stdin to stdout",
+			Destination: &throughMode,
+		},
 	}
 
 	app.Action = func(c *cli.Context) {
@@ -81,6 +87,8 @@ func main() {
 			return nil
 		}
 
+		iostreams.ThroughMode = throughMode
+
 		err := iostreams.ProcessStdin(process)
 		if err != nil {
 			log.Panicln(err.Error())
@@ -88,12 +96,6 @@ func main() {
 	}
 
 	app.Run(os.Args)
-}
-
-func debug(msg string) {
-	if debugMode {
-		log.Println("[DEBUG] " + msg)
-	}
 }
 
 func sendRequest(urlString, dataString string) error {
@@ -119,7 +121,13 @@ func sendRequest(urlString, dataString string) error {
 		return err
 	}
 
-	fmt.Println(string(body))
+	debug("[INFO] Response: %s\n", string(body))
 
 	return nil
+}
+
+func debug(format string, args ...interface{}) {
+	if debugMode {
+		log.Printf("[DEBUG] "+format+"\n", args...)
+	}
 }
