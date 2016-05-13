@@ -129,12 +129,12 @@ func sendRequest(urlString, dataString string) error {
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
-	debug("[INFO] Response: %s\n", string(body))
+	debug("Response: %s\n", string(body))
 
 	return nil
 }
